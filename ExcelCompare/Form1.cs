@@ -1,4 +1,4 @@
-using FuzzySharp;
+ï»¿using FuzzySharp;
 using Newtonsoft.Json;
 using OfficeOpenXml;
 using System.Text.RegularExpressions;
@@ -25,28 +25,28 @@ namespace ExcelCompare
             for (int r = 2; r <= worksheet.Dimension.Rows; r++)
             {
                 var name = $"{worksheet.Cells[r, 2].Value}";
-                var star = $"{worksheet.Cells[r, 3].Value}";
                 var state = $"{worksheet.Cells[r, 4].Value}";
-
+                if (string.IsNullOrEmpty(state)) continue;
                 var result = json!.Select(x => new
                 {
-                    score = Fuzz.PartialRatio(TurkishCharsToEnglish(x.TesisAdi).ToUpper(), TurkishCharsToEnglish(name).ToUpper()),
+                    score = Fuzz.TokenSetRatio(TurkishCharsToEnglish(x.TesisAdi).ToUpper(), TurkishCharsToEnglish(name).ToUpper()),
                     x.BelgeTuru,
                     x.TesisAdi,
                     x.Ilce,
                     x.Sehir,
                     x.TesisSinifi,
                     x.TesisTuru
-                }).OrderByDescending(x => x.score).FirstOrDefault();
+                }).Where(x => TurkishCharsToEnglish(x.Sehir).ToUpper() == TurkishCharsToEnglish(state).ToUpper()).OrderByDescending(x => x.score).FirstOrDefault();
             
                 if (result is null) continue;
                 else
                 {
                     json!.RemoveAt(json.FindIndex(x => x.TesisAdi == result.TesisAdi));
-                    worksheet.Cells[r, 6].Value = result.TesisAdi;
-                    worksheet.Cells[r, 7].Value = $"{result.Sehir} - {result.Ilce}";
-                    worksheet.Cells[r, 8].Value = $"{result.TesisTuru} - {result.TesisSinifi}";
-                    worksheet.Cells[r, 9].Value = result.BelgeTuru;
+                    worksheet.Cells[r, 7].Value = result.score;
+                    worksheet.Cells[r, 8].Value = result.TesisAdi;
+                    worksheet.Cells[r, 9].Value = $"{result.Sehir} - {result.Ilce}";
+                    worksheet.Cells[r, 10].Value = $"{result.TesisTuru} - {result.TesisSinifi}";
+                    worksheet.Cells[r, 11].Value = result.BelgeTuru;
                 }
                 progressBar1.Value = r - 1;
             }
@@ -58,23 +58,16 @@ namespace ExcelCompare
 
         public static string TurkishCharsToEnglish(string input)
         {
-
-            return Regex.Replace(input, "[ýöüðþçÝÖÜÐÞÇ]", c =>
+            return Regex.Replace(input, "[ÄžÃœÄ°ÅžÃ‡Ã–]", c =>
             {
                 return c.Value switch
                 {
-                    "ý" => "i",
-                    "ö" => "o",
-                    "ü" => "u",
-                    "ð" => "g",
-                    "þ" => "s",
-                    "ç" => "c",
-                    "Ý" => "I",
-                    "Ö" => "O",
-                    "Ü" => "U",
-                    "Ð" => "G",
-                    "Þ" => "S",
-                    "Ç" => "C",
+                    "Ä°" => "I",
+                    "Ã–" => "O",
+                    "Ã‡" => "C",
+                    "Äž" => "G",
+                    "Ãœ" => "U",
+                    "Åž" => "S",
                     _ => c.Value,
                 };
             });
